@@ -1,13 +1,19 @@
 package forense_json;
 
-/**
- * Hello world!
- *
- */
-public class App 
+import java.io.IOException;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@WebServlet("/")
+public class App extends HttpServlet
 {
-    public static void main( String[] args )
-    {
-        System.out.println( "Hello World!" );
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.getWriter().write("Servlet Online!"); 
+        System.out.println("Print Teste!");
     }
 }
