@@ -9,54 +9,61 @@ import java.net.http.HttpResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
-@WebServlet("/census")
-public class Api extends HttpServlet {
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+@Path("/census")
+public class Api {
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response doGet(
+            @QueryParam("offset") String offsetParam,
+            @QueryParam("limit") String limitParam,
+            @QueryParam("showAlerts") String showAlertsParam) throws IOException {
 
         int offset = 1;
         int limit = 20;
-        boolean showAlerts = true;
-
-        String offsetParam = req.getParameter("offset");
-        String limitParam = req.getParameter("limit");
-        String showAlertsParam = req.getParameter("showAlerts");
+        Boolean showAlerts = true;
 
         if (offsetParam != null && !offsetParam.trim().isEmpty()) {
             try {
                 offset = Integer.parseInt(offsetParam.trim());
                 if (offset < 1) {
-                    sendBadRequest(resp, "O parâmetro offset deve ser um número inteiro superior a 0.");
-                    return;
+                    return Response.status(Response.Status.BAD_REQUEST)
+                                    .entity("O parâmetro offset deve ser um número inteiro superior a 0.")
+                                    .build();
                 }
             } catch (NumberFormatException e) {
-                sendBadRequest(resp, "O parâmetro offset não pode ser texto.");
-                return;
+                return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("O parâmetro offset não pode ser texto.")
+                                .build();
             }
         }
         if (limitParam != null && !limitParam.trim().isEmpty()) {
             try {
                 limit = Integer.parseInt(limitParam);
                 if (limit < 1 || limit > 50) {
-                    sendBadRequest(resp, "O parâmetro limit deve ser um número inteiro entre 1 e 50.");
-                    return;
+                return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("O parâmetro limit deve ser um número inteiro entre 1 e 50.")
+                                .build();
                 }
             } catch (NumberFormatException e) {
-                sendBadRequest(resp, "O parâmetro limit não pode ser texto.");
-                return;
+                return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("O parâmetro limit não pode ser texto.")
+                                .build();
             }
         }
         if (showAlertsParam != null && !showAlertsParam.trim().isEmpty()) {
             String validAlertsParam = showAlertsParam.trim().toLowerCase();
             if (!validAlertsParam.equals("true") && !validAlertsParam.equals("false")) {
-                sendBadRequest(resp, "O parâmetro showAlerts deve ser true ou false.");
-                return;
+                return Response.status(Response.Status.BAD_REQUEST)
+                                .entity("O parâmetro showAlerts deve ser true ou false.")
+                                .build();
             }
             showAlerts = Boolean.parseBoolean(showAlertsParam);
         }
@@ -67,6 +74,7 @@ public class Api extends HttpServlet {
         int countDead = 0;
         int countUnknown = 0;
 
+        String message = "";
         for (int i = offset; i < offset + limit; i++) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://rickandmortyapi.com/api/character/" + i))
@@ -87,20 +95,21 @@ public class Api extends HttpServlet {
                     int id = jsonNode.get("id").asInt();
                     String name = jsonNode.get("name").asText();
 
+
                     if (jsonString.contains("Alive")) {
-                        resp.getWriter().write("ID: " + id + " Name: " + name + " is Alive.\n");
+                        message += "ID: " + id + " Name: " + name + " is Alive.\n";
                         countAlive++;
                     } else if (jsonString.contains("Dead")) {
                         if (jsonString.contains("Alien")) {
                             if (showAlerts) {
-                                resp.getWriter().write("[PERIGO] Um Alien foi encontrado morto com o ID " + id + "!\n");
-                                getNomeEpisodio(jsonNode, resp);
+                                message += "[PERIGO] Um Alien foi encontrado morto com o ID " + id + "!\n";
+                                getNomeEpisodio(jsonNode, message);
                             }
                         }
-                        resp.getWriter().write("ID: " + id + " Name: " + name + " is Dead.\n");
+                        message += "ID: " + id + " Name: " + name + " is Dead.\n";
                         countDead++;
                     } else {
-                        resp.getWriter().write("ID: " + id + " Name: " + name + " is unknown.\n");
+                        message += "ID: " + id + " Name: " + name + " is unknown.\n";
                         countUnknown++;
                     }
                     success = true;
@@ -118,13 +127,16 @@ public class Api extends HttpServlet {
 
         }
 
-        resp.getWriter().write("Total de personagens vivos: " + countAlive + "\n");
-        resp.getWriter().write("Total de personagens mortos: " + countDead + "\n");
-        resp.getWriter().write("Total de personagens desconhecido: " + countUnknown + "\n");
+        message += "Total de personagens vivos: " + countAlive + "\n";
+        message += "Total de personagens mortos: " + countDead + "\n";
+        message += "Total de personagens desconhecido: " + countUnknown + "\n";
 
+        return Response.status(Response.Status.OK)
+                        .entity(message)
+                        .build();
     }
 
-    public static void getNomeEpisodio(JsonNode jsonNode, HttpServletResponse resp) throws Exception {
+    public static void getNomeEpisodio(JsonNode jsonNode, String message) throws Exception {
         String primeiroEpisodio = jsonNode.get("episode").get(0).asText();
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
@@ -140,22 +152,10 @@ public class Api extends HttpServlet {
         try {
             JsonNode jsonNodeEpisode = mapper.readTree(jsonString);
             String nameEpisode = jsonNodeEpisode.get("name").asText();
-            resp.getWriter()
-                    .write("[ALERTA FORENSE] O último registo do alien morto foi no episódio: " + nameEpisode + "\n");
+            message += "[ALERTA FORENSE] O último registo do alien morto foi no episódio: " + nameEpisode + "\n";
         } catch (Exception e) {
             System.out.println("Exception generica Episodio");
         }
 
-    }
-
-    private void sendBadRequest(HttpServletResponse resp, String message) throws IOException {
-        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        resp.setContentType("application/json; charset=UTF-8");
-        resp.getWriter().write(
-                "{\n" +
-                        "  \"status\": 400,\n" +
-                        "  \"error\": \"Bad Request\",\n" +
-                        "  \"message\": \"" + message + "\"\n"
-                        + "}");
     }
 }
