@@ -1,3 +1,8 @@
+forense_json\Census\opencollection.yml
+forense_json\PersonagemService.class
 forense_json\Api.class
 forense_json\RestApplication.class
+forense_json\PersonagemController.class
+forense_json\Census\POST Nova Personagem.yml
+forense_json\PersonagemRepository.class
 forense_json\Personagem.class

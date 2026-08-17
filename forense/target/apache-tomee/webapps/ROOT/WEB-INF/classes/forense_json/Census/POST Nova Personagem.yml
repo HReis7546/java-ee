@@ -1,0 +1,25 @@
+info:
+  name: POST Nova Personagem
+  type: http
+
+http:
+  method: POST
+  url: http://localhost:8080/api/personagem/criar?nome=Gandalf&especie=Feiticeiro&comidaFavorita=Lasanha
+  params:
+    - name: nome
+      value: Gandalf
+      type: query
+    - name: especie
+      value: Feiticeiro
+      type: query
+    - name: comidaFavorita
+      value: Lasanha
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​
