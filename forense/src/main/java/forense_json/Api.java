@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -35,35 +36,35 @@ public class Api {
                 offset = Integer.parseInt(offsetParam.trim());
                 if (offset < 1) {
                     return Response.status(Response.Status.BAD_REQUEST)
-                                    .entity("O parâmetro offset deve ser um número inteiro superior a 0.")
-                                    .build();
+                            .entity("O parâmetro offset deve ser um número inteiro superior a 0.")
+                            .build();
                 }
             } catch (NumberFormatException e) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                                .entity("O parâmetro offset não pode ser texto.")
-                                .build();
+                        .entity("O parâmetro offset não pode ser texto.")
+                        .build();
             }
         }
         if (limitParam != null && !limitParam.trim().isEmpty()) {
             try {
                 limit = Integer.parseInt(limitParam);
                 if (limit < 1 || limit > 50) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                                .entity("O parâmetro limit deve ser um número inteiro entre 1 e 50.")
-                                .build();
+                    return Response.status(Response.Status.BAD_REQUEST)
+                            .entity("O parâmetro limit deve ser um número inteiro entre 1 e 50.")
+                            .build();
                 }
             } catch (NumberFormatException e) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                                .entity("O parâmetro limit não pode ser texto.")
-                                .build();
+                        .entity("O parâmetro limit não pode ser texto.")
+                        .build();
             }
         }
         if (showAlertsParam != null && !showAlertsParam.trim().isEmpty()) {
             String validAlertsParam = showAlertsParam.trim().toLowerCase();
             if (!validAlertsParam.equals("true") && !validAlertsParam.equals("false")) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                                .entity("O parâmetro showAlerts deve ser true ou false.")
-                                .build();
+                        .entity("O parâmetro showAlerts deve ser true ou false.")
+                        .build();
             }
             showAlerts = Boolean.parseBoolean(showAlertsParam);
         }
@@ -95,7 +96,6 @@ public class Api {
                     int id = jsonNode.get("id").asInt();
                     String name = jsonNode.get("name").asText();
 
-
                     if (jsonString.contains("Alive")) {
                         message += "ID: " + id + " Name: " + name + " is Alive.\n";
                         countAlive++;
@@ -103,7 +103,7 @@ public class Api {
                         if (jsonString.contains("Alien")) {
                             if (showAlerts) {
                                 message += "[PERIGO] Um Alien foi encontrado morto com o ID " + id + "!\n";
-                                getNomeEpisodio(jsonNode, message);
+                                message += getNomeEpisodio(jsonNode);
                             }
                         }
                         message += "ID: " + id + " Name: " + name + " is Dead.\n";
@@ -131,12 +131,14 @@ public class Api {
         message += "Total de personagens mortos: " + countDead + "\n";
         message += "Total de personagens desconhecido: " + countUnknown + "\n";
 
+        System.out.println(message);
+
         return Response.status(Response.Status.OK)
-                        .entity(message)
-                        .build();
+                .entity(message)
+                .build();
     }
 
-    public static void getNomeEpisodio(JsonNode jsonNode, String message) throws Exception {
+    public static String getNomeEpisodio(JsonNode jsonNode) throws Exception {
         String primeiroEpisodio = jsonNode.get("episode").get(0).asText();
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
@@ -152,10 +154,10 @@ public class Api {
         try {
             JsonNode jsonNodeEpisode = mapper.readTree(jsonString);
             String nameEpisode = jsonNodeEpisode.get("name").asText();
-            message += "[ALERTA FORENSE] O último registo do alien morto foi no episódio: " + nameEpisode + "\n";
+            return "[ALERTA FORENSE] O último registo do alien morto foi no episódio: " + nameEpisode + "\n";
         } catch (Exception e) {
             System.out.println("Exception generica Episodio");
+            return "";
         }
-
     }
 }
